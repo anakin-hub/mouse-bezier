@@ -38,6 +38,8 @@ public class PathManager : MonoBehaviour
     bool spawnMode = true;
     bool playMode = false;
 
+    private LineRenderer lineRenderer;
+
     void Start()
     {
         // Ensure the main camera is assigned
@@ -46,6 +48,15 @@ public class PathManager : MonoBehaviour
             mainCamera = Camera.main;
         }
         targetAnchor = 3;
+
+        // Add and configure the LineRenderer
+        lineRenderer = gameObject.AddComponent<LineRenderer>();
+        lineRenderer.startWidth = 0.05f;
+        lineRenderer.endWidth = 0.05f;
+        lineRenderer.positionCount = 0; // Will update later with the curve points
+        lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
+        lineRenderer.startColor = Color.magenta;
+        lineRenderer.endColor = Color.magenta;
     }
 
     void Update()
@@ -99,7 +110,10 @@ public class PathManager : MonoBehaviour
                 running = true;
                 if (!playMode) { playMode = true; }
             }
+
         }
+
+        DrawCurveWithLineRenderer();
 
         if (!isDragging && playMode)
             RunOnPath();
@@ -136,7 +150,28 @@ public class PathManager : MonoBehaviour
         }
     }
 
-    // Find the parameter t corresponding to a given arc length (s)
+    void DrawCurveWithLineRenderer()
+    {
+        if (bezierPoints.Count < 4) return;
+
+        List<Vector3> points = new List<Vector3>();
+        for (int i = 0; i < bezierPoints.Count - 1; i += 3)
+        {
+            Vector3 previousPoint = bezierPoints[i].position;
+
+            for (int j = 1; j <= curveResolution; j++)
+            {
+                float t = j / (float)curveResolution;
+                Vector3 currentPoint = GetPointOnBezierCurve(bezierPoints[i].position, bezierPoints[i + 1].position, bezierPoints[i + 2].position, bezierPoints[i + 3].position, t);
+                points.Add(currentPoint);
+            }
+        }
+
+        // Update LineRenderer with the calculated points
+        lineRenderer.positionCount = points.Count;
+        lineRenderer.SetPositions(points.ToArray());
+    }
+
     float GetTForArcLength(float s)
     {
         float targetLength = s * totalLength;
@@ -282,7 +317,7 @@ public class PathManager : MonoBehaviour
         
 
     }    
-    
+
     public void EditButton()
     {
         editMode = true;
